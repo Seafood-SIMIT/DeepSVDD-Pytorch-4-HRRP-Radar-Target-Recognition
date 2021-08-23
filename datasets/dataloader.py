@@ -9,7 +9,9 @@ import math
 import scipy.io as scio #读取mat文件使用的python库
 from itertools import compress
 from sklearn.model_selection import train_test_split
-
+def normalization(data):
+    _range = np.max(data) - np.min(data)
+    return (data - np.min(data)) / _range
 def read_data(mat_list,hp):
     total_data = []
     total_label= []
@@ -29,19 +31,38 @@ def read_data(mat_list,hp):
         
         data_value = np.array(data_value)
 
+        #abs操作
         radar_pulse_squence = abs(radar_pulse_squence['radar_pulse_sequence'])
         radar_gate_step = radar_data_gate['radar_data_gate_step']
         radar_gate_start = radar_data_gate['radar_data_gate_start'].reshape(1000)
     
         label=np.zeros((1000,1))
+        ## positive data
+        data_n = np.zeros((1000,hp.data.array_length))
+        label_n = -1*np.ones((1000,1))
+        data_p = np.zeros((1000*hp.data.ntp,hp.data.array_length))
+        label_p = np.ones((1000*hp.data.ntp,1))
         for item in range(len(radar_pulse_squence)):
             #item_file = self.data_list[idx]
             # data
-            #self.radar_sequence.append(radar_pulse_squence(item))
-            # label
-            label[item,0] = np.round((data_value[item] - radar_gate_start[item])/radar_gate_step)
-        total_data.append(radar_pulse_squence)
-        total_label.append(label)
+            #print(data_value[item],radar_gate_start[item],radar_gate_step)
+            n_index = int((data_value[item] - radar_gate_start[item])/radar_gate_step.reshape(1)[0])
+            #print(p_index[0])
+            data_n[item,:] = radar_pulse_squence[item,(n_index-int(hp.data.array_length/2)):(n_index+int(hp.data.array_length/2))]
+            data_n[item,:] = normalization(data_n[item,:])
+            for i_n_random in range(hp.data.ntp):
+                p_index = int(np.random.randint(low=hp.data.array_length/2,high=533-hp.data.array_length/2,size=1))
+                if p_index in range((n_index-int(hp.data.array_length/2)),(n_index+int(hp.data.array_length/2))):
+                    i_n_random = i_n_random -1
+                    continue
+                else:
+                    data_p[item*5+i_n_random,:] = radar_pulse_squence[item,(p_index-int(hp.data.array_length/2)):(p_index+int(hp.data.array_length/2))]
+                    data_p[item*5+i_n_random,:] = normalization(data_p[item*5+i_n_random,:])
+
+        total_data.append(data_p)
+        total_data.append(data_n)
+        total_label.append(label_p)
+        total_label.append(label_n)
     return total_data,total_label
 #制作dataloader
 def create_dataloader(hp, logger, args):
@@ -65,7 +86,7 @@ def create_dataloader(hp, logger, args):
     #radar_pulse_squence = radar_pulse_squence/np.max(abs(radar_pulse_squence))
     #print(data_value.shape ,radar_gate_start.shape)
         
-    train_set, test_set,train_label,test_label = train_test_split(data, label, test_size = 0.3,random_state = 1)
+    train_set, test_set,train_label,test_label = train_test_split(data, label, test_size = hp.data.test_size,random_state = 1)
     
     #print(train_set.shape, test_set.shape)
     loader_train = DataLoader(dataset=HRRPDataset(hp, args, train_set,train_label),
