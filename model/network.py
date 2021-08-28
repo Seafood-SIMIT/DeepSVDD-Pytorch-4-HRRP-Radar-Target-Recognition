@@ -9,25 +9,49 @@ class DeepSVDDNetwork(BaseNet):
     def __init__(self):
         super().__init__()
 
+
         self.rep_dim = 8
+
+        self.R = torch.nn.Parameter(torch.tensor(0.5,requires_grad = True))  # radius R initialized with 0 by default.
+        self.c = torch.nn.Parameter(torch.zeros((1,self.rep_dim),requires_grad=True))
+        self.register_parameter("Radius",self.R)
+        self.register_parameter("c",self.c)
+
+        self.pool = nn.MaxPool1d(2, 2)
         
-        # 二维图转为一维雷达高分辨距离像
-        self.conv1 = nn.Conv1d(in_channels=1,out_channels = 32, kernel_size=1)
-        self.bn1 = nn.BatchNorm1d(32)
-        self.conv2 = nn.Conv1d(in_channels=32,out_channels = 16, kernel_size=1)
-        self.bn2 = nn.BatchNorm1d(16)
-        self.conv3 = nn.Conv1d(in_channels=16,out_channels = 8, kernel_size=1)
-        self.bn3 = nn.BatchNorm1d(8)
-        self.fc1 = nn.Linear(8*32, self.rep_dim, bias=False)
+        self.conv = nn.Sequential(
+            ##cnn1
+            nn.Conv1d(in_channels=1,out_channels = 8, kernel_size=5, bias=False, padding=2),
+            nn.BatchNorm1d(8,eps=1e-04, affine=False),
+            nn.LeakyReLU(),
+            nn.MaxPool1d(2,2),
+            nn.Conv1d(in_channels=8,out_channels = 4, kernel_size=5, bias=False, padding=2),
+            nn.BatchNorm1d(4,eps=1e-04, affine=False),
+            nn.LeakyReLU(),
+            nn.MaxPool1d(2,2)
+        )
+
+        self.fc = nn.Sequential(
+            nn.Linear(4*8, self.rep_dim, bias=False)
+        )
+        # self.lstm = nn.LSTM(
+        #                     input_size=32,
+        #                     hidden_size=16,
+        #                     batch_first=True,
+        #                     bidirectional=False,
+        #                     )
+
 
 
     def forward(self, x):
-        x = x.unsqueeze(1)      #[batch,1,20]
-        x = self.conv1(x)       #[batch,32,20]
-        x = self.conv2(x)       #[batch,8,19]
-        x = self.conv3(x)       #[batch,8,19]
-        x = x.view(x.size(0), -1)       #[batch,8*19]
+        x = x.unsqueeze(1)      #[batch,1,32]
+        x = self.conv(x)       #[batch,out,32]
+        #x = self.pool(F.leaky_relu(x))
+        #x, (h_n,c_n) = self.lstm(x)     #[batch,input,hidden]
         #print(x.shape)
-        x = self.fc1(x)                 #[batch,8]
+        x = x.contiguous().view(x.size(0), -1)       #[batch,input*hidden]
+        #print(x.shape)
+        x = self.fc(x)                 #[batch,rep_dim]
+        #x = torch.tanh(x)
 
         return x

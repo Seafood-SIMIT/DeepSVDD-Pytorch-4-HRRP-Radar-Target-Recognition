@@ -50,14 +50,14 @@ def read_data(mat_list,hp):
             #print(p_index[0])
             data_n[item,:] = radar_pulse_squence[item,(n_index-int(hp.data.array_length/2)):(n_index+int(hp.data.array_length/2))]
             data_n[item,:] = normalization(data_n[item,:])
-            for i_n_random in range(hp.data.ntp):
+            for i_p_random in range(hp.data.ntp):
                 p_index = int(np.random.randint(low=hp.data.array_length/2,high=533-hp.data.array_length/2,size=1))
                 if p_index in range((n_index-int(hp.data.array_length/2)),(n_index+int(hp.data.array_length/2))):
-                    i_n_random = i_n_random -1
+                    i_p_random = i_p_random -1
                     continue
                 else:
-                    data_p[item*5+i_n_random,:] = radar_pulse_squence[item,(p_index-int(hp.data.array_length/2)):(p_index+int(hp.data.array_length/2))]
-                    data_p[item*5+i_n_random,:] = normalization(data_p[item*5+i_n_random,:])
+                    data_p[item*hp.data.ntp+i_p_random,:] = radar_pulse_squence[item,(p_index-int(hp.data.array_length/2)):(p_index+int(hp.data.array_length/2))]
+                    data_p[item*hp.data.ntp+i_p_random,:] = normalization(data_p[item*hp.data.ntp+i_p_random,:])
 
         total_data.append(data_p)
         total_data.append(data_n)
@@ -90,7 +90,7 @@ def create_dataloader(hp, logger, args):
     
     #print(train_set.shape, test_set.shape)
     loader_train = DataLoader(dataset=HRRPDataset(hp, args, train_set,train_label),
-                      batch_size = hp.train.batch_size,
+                      batch_size = hp.ae.batch_size,
                       shuffle=True,
                       drop_last = True,
                       )
@@ -107,7 +107,7 @@ class HRRPDataset(Dataset):
         self.args = args
         self.radar_sequence = data_set
         self.label = label_set
-        self.tensor_radar_sequence = torch.tensor(self.radar_sequence, dtype=torch.float,requires_grad = True)
+        self.tensor_radar_sequence = torch.tensor(self.radar_sequence, dtype=torch.float,requires_grad = False)
         self.tensor_label = torch.tensor(self.label, dtype=torch.float)
         
         ##划分测试集
@@ -116,6 +116,6 @@ class HRRPDataset(Dataset):
         return len(self.label)
     
     def __getitem__(self, idx):
-        return self.tensor_radar_sequence[idx], self.tensor_label[idx], idx
+        return self.tensor_radar_sequence[idx], self.tensor_label[idx]
         #return 0, 0
             

@@ -65,15 +65,15 @@ class DeepSVDD(object):
                                        weight_decay=weight_decay, device=device, n_jobs_dataloader=n_jobs_dataloader)
         # Get the model
         self.net = self.trainer.train(trainloader, self.net)
-        self.R = float(self.trainer.R.cpu().data.numpy())  # get float
-        self.c = self.trainer.c.cpu().data.numpy().tolist()  # get list
+        self.R = float(self.net.R.cpu().data.numpy())  # get float
+        self.c = self.net.c.cpu().data.numpy().tolist()  # get list
         self.results['train_time'] = self.trainer.train_time
 
     def test(self, testloader, device: str = 'cuda', n_jobs_dataloader: int = 0):
         """Tests the Deep SVDD model on the test data."""
 
         if self.trainer is None:
-            self.trainer = DeepSVDDTrainer(self.objective, self.R, self.c, self.nu,
+            self.trainer = DeepSVDDTrainer(self.objective, self.net.R, self.net.c, self.nu,
                                            device=device, n_jobs_dataloader=n_jobs_dataloader)
 
         self.trainer.test(testloader, self.net)

@@ -13,12 +13,12 @@ def train(args, pt_dir, chkpt_path, trainloader, testloader, writer, logger, hp,
 
     if hp.train.pretrain:
         # Log pretraining details
-        logger.info('Pretraining optimizer: %s' % hp.train.optimizer)
-        logger.info('Pretraining learning rate: %g' % hp.train.lr)
-        logger.info('Pretraining epochs: %d' % hp.train.epochs)
-        logger.info('Pretraining learning rate scheduler milestones: %s' % hp.train.lr_milestone)
-        logger.info('Pretraining batch size: %d' % hp.train.batch_size)
-        logger.info('Pretraining weight decay: %g' % hp.train.weight_decay)
+        logger.info('Pretraining optimizer: %s' % hp.ae.optimizer)
+        logger.info('Pretraining learning rate: %g' % hp.ae.lr)
+        logger.info('Pretraining epochs: %d' % hp.ae.epochs)
+        logger.info('Pretraining learning rate scheduler milestones: %s' % hp.ae.lr_milestone)
+        logger.info('Pretraining batch size: %d' % hp.ae.batch_size)
+        logger.info('Pretraining weight decay: %g' % hp.ae.weight_decay)
 
         # Pretrain model on dataset (via autoencoder)
         deep_SVDD.pretrain(trainloader,
@@ -32,12 +32,12 @@ def train(args, pt_dir, chkpt_path, trainloader, testloader, writer, logger, hp,
                            device=device,
                            n_jobs_dataloader=hp.ae.n_jobs_dataloader)
     # Log training details
-    logger.info('Training optimizer: %s' % hp.ae.optimizer)
-    logger.info('Training learning rate: %g' % hp.ae.lr)
-    logger.info('Training epochs: %d' % hp.ae.epochs)
-    logger.info('Training learning rate scheduler milestones: %s' % hp.ae.lr_milestone)
-    logger.info('Training batch size: %d' % hp.ae.batch_size)
-    logger.info('Training weight decay: %g' % hp.ae.weight_decay)
+    logger.info('Training optimizer: %s' % hp.train.optimizer)
+    logger.info('Training learning rate: %g' % hp.train.lr)
+    logger.info('Training epochs: %d' % hp.train.epochs)
+    logger.info('Training learning rate scheduler milestones: %s' % hp.train.lr_milestone)
+    logger.info('Training batch size: %d' % hp.train.batch_size)
+    logger.info('Training weight decay: %g' % hp.train.weight_decay)
     
 
     # Train model on dataset

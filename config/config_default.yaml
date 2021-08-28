@@ -1,6 +1,6 @@
 data:
   train_dir: "/root/svdd_torch/data/train_dir"
-  ntp: 10
+  ntp: 3
   array_length: 32
   test_size: 0.3
 ---
@@ -8,17 +8,17 @@ train:
   pretrain: True
   batch_size: 64
   optimizer: 'adam'
-  lr: 0.0001
-  epochs: 15
-  lr_milestone: 50
+  lr: 0.0003
+  epochs: 40
+  lr_milestone: 100
   weight_decay: 0.5e-6
   n_jobs_dataloader: 0
 ---
 ae:
-  lr: 0.0001
-  epochs: 10
-  optimizer: 'sgd'
-  lr_milestone: 50
+  lr: 0.0003
+  epochs: 40
+  optimizer: 'adam'
+  lr_milestone: 20
   batch_size: 64
   weight_decay: 0.5e-3
   normal_class: 3
@@ -29,5 +29,5 @@ log:
   log_dir: 'logs'
 ---
 deepsvdd:
-  objective: 'one-class'
+  objective: 'soft-boundary'
   nu: 0.1

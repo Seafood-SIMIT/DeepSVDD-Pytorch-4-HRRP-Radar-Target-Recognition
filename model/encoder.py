@@ -9,48 +9,70 @@ def build_autoencoder():
     ae_net = DeepAutoEncoder()
     return ae_net
 
+class Interpolate(nn.Module):
+    def __init__(self, scale_factor=2):
+        super(Interpolate, self).__init__()
+        self.interp = nn.functional.interpolate
+        self.scale_factor = scale_factor
+        
+    def forward(self, x):
+        x = self.interp(x, scale_factor=self.scale_factor)
+        return x
 
 class DeepAutoEncoder(BaseNet):
 
     def __init__(self):
         super().__init__()
-
         self.rep_dim = 8
-        
-        # 二维图转为一维雷达高分辨距离像
-        self.conv1 = nn.Conv1d(in_channels=1,out_channels = 32, kernel_size=1)
-        self.bn1 = nn.BatchNorm1d(32)
-        self.conv2 = nn.Conv1d(in_channels=32,out_channels = 16, kernel_size=2)
-        self.bn2 = nn.BatchNorm1d(16)
-        self.conv3 = nn.Conv1d(in_channels=16,out_channels = 8, kernel_size=1)
-        self.bn3 = nn.BatchNorm1d(8)
-        self.fc1 = nn.Linear(8*31, self.rep_dim, bias=False)
 
+        self.inter_layer = Interpolate(scale_factor=2)
+        self.conv = nn.Sequential(
+            ##cnn1
+            nn.Conv1d(in_channels=1,out_channels = 8, kernel_size=5, bias=False, padding=2),
+            nn.BatchNorm1d(8,eps=1e-04, affine=False),
+            nn.LeakyReLU(),
+            nn.MaxPool1d(2,2),
+            nn.Conv1d(in_channels=8,out_channels = 4, kernel_size=5, bias=False, padding=2),
+            nn.BatchNorm1d(4,eps=1e-04, affine=False),
+            nn.LeakyReLU(),
+            nn.MaxPool1d(2,2)
+        )
+
+        self.fc = nn.Sequential(
+            nn.Linear(4*8, self.rep_dim, bias=False)
+        )
+
+        self.deconv = nn.Sequential(
+            nn.LeakyReLU(),
+            self.inter_layer,
+            nn.ConvTranspose1d(2,4,kernel_size = 5, bias=False, padding=2),
+            nn.BatchNorm1d(4,eps=1e-04, affine=False),
+            nn.LeakyReLU(),
+            self.inter_layer,
+            nn.ConvTranspose1d(4,8,kernel_size = 5, bias=False, padding=2),
+            nn.BatchNorm1d(8,eps=1e-04, affine=False),
+            nn.LeakyReLU(),
+            self.inter_layer,
+            nn.ConvTranspose1d(8, 1, kernel_size=5, bias=False, padding=2),
+        )
         # Decoder
-        self.deconv1 = nn.ConvTranspose1d(1,8,kernel_size = 1)
-        self.bn11 = nn.BatchNorm1d(8)
-        self.deconv2 = nn.ConvTranspose1d(8,16,kernel_size = 1)
-        self.bn12 = nn.BatchNorm1d(16)
-        self.deconv3 = nn.ConvTranspose1d(16, 32, kernel_size=1)
-        self.bn13 = nn.BatchNorm1d(32)
-        self.deconv4 = nn.ConvTranspose1d(32, 1, kernel_size=1)
-
+        #self.bn13 = nn.BatchNorm1d(32)
 
     def forward(self, x):
-        x = x.unsqueeze(1)      #[batch,1,20]
-        x = self.conv1(x)       #[batch,32,20]
-        x = self.conv2(x)       #[batch,8,19]
-        x = self.conv3(x)       #[batch,8,19]
-        x = x.view(x.size(0), -1)       #[batch,8*19]
+        x = x.unsqueeze(1)      #[batch,1,32]
+        x = self.conv(x)       #[batch,32,32]
+        #x, (h_n,c_n) = self.lstm(x)     #[batch,input,hidden]
         #print(x.shape)
-        x = self.fc1(x)                 #[batch,8]
-        x = x.view(x.size(0), int(self.rep_dim / 8),8) #[batch,2,4]
-        x = F.interpolate(F.leaky_relu(x), scale_factor=2)  #[batch,2,16]
-        x = self.deconv1(x)     #[batch,8,16]
-        x = F.interpolate(F.leaky_relu(x), scale_factor=2)  #[batch,2,32]
-        x = self.deconv2(x)     #[batch,32,32]
-        x = self.deconv3(x)     #[batch,1,32]
-        x = self.deconv4(x)     #[batch,1,32]
+        x = x.contiguous().view(x.size(0), -1)       #[batch,input*hidden]
+        #print(x.shape)
+        x = self.fc(x)                 #[batch,rep_dim]
+        #x = x.unsqueeze(1)      #[batch,1,repdim]
+        #print(x.shape)
+        x = x.view(x.size(0), int(self.rep_dim/4),4) #[batch,2,8]
+        #print(x.shape)
+        #x = F.interpolate(F.leaky_relu(x),scale_factor=4)
+        x = self.deconv(x)     #[batch,8,16]
+        x = x.view(x.size(0),-1)
+        #print(x.shape)
         x = torch.sigmoid(x)
-
         return x

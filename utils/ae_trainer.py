@@ -30,8 +30,11 @@ class AETrainer(BaseTrainer):
         optimizer = optim.Adam(ae_net.parameters(), lr=self.lr, weight_decay=self.weight_decay,
                                amsgrad=self.optimizer_name == 'amsgrad')
 
+        # Set loss
+        loss_mse = torch.nn.MSELoss()
         # Set learning rate scheduler
         scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=self.lr_milestones, gamma=0.1)
+
 
         # Training
         logger.info('Starting pretraining...')
@@ -39,24 +42,32 @@ class AETrainer(BaseTrainer):
         ae_net.train()
         for epoch in range(self.n_epochs):
 
-            scheduler.step()
+            #scheduler.step()
             if epoch in self.lr_milestones:
-                logger.info('  LR scheduler: new learning rate is %g' % float(scheduler.get_lr()[0]))
+                logger.info('  LR scheduler: new learning rate is %g' % float(scheduler.get_last_lr()[0]))
 
             loss_epoch = 0.0
             n_batches = 0
             epoch_start_time = time.time()
             for data in train_loader:
-                inputs, _, _= data
+                inputs, _= data
                 inputs = inputs.to(self.device)
-
+                
                 # Zero the network parameter gradients
                 optimizer.zero_grad()
 
                 # Update network parameters via backpropagation: forward + backward + optimize
                 outputs = ae_net(inputs)
+                #print(inputs.shape,'and',outputs.shape)
+                #print('from ',inputs[0,0:2],'to',outputs[0,0:2])
+                #print(outputs[0])
+                #print(outputs)
+                #这里使用MSEloss
                 scores = torch.sum((outputs - inputs) ** 2, dim=tuple(range(1, outputs.dim())))
                 loss = torch.mean(scores)
+                #loss = torch.sum((outputs - inputs) ** 2)
+                #loss = loss_mse(outputs, inputs)
+                #print(loss,'To',scores)
                 loss.backward()
                 optimizer.step()
 
@@ -92,15 +103,17 @@ class AETrainer(BaseTrainer):
         ae_net.eval()
         with torch.no_grad():
             for data in test_loader:
-                inputs, labels, idx = data
+                inputs, labels = data
                 inputs = inputs.to(self.device)
                 outputs = ae_net(inputs)
+                
+                #print(outputs[0])
+                #为什么要使用输出减输入作为label的标准呢
                 scores = torch.sum((outputs - inputs) ** 2, dim=tuple(range(1, outputs.dim())))
                 loss = torch.mean(scores)
 
                 # Save triple of (idx, label, score) in a list
-                idx_label_score += list(zip(idx.cpu().data.numpy().tolist(),
-                                            labels.cpu().data.numpy().tolist(),
+                idx_label_score += list(zip(labels.cpu().data.numpy().tolist(),
                                             scores.cpu().data.numpy().tolist()))
 
                 loss_epoch += loss.item()
@@ -108,7 +121,7 @@ class AETrainer(BaseTrainer):
 
         logger.info('Test set Loss: {:.8f}'.format(loss_epoch / n_batches))
 
-        _, labels, scores = zip(*idx_label_score)
+        labels, scores = zip(*idx_label_score)
         labels = np.array(labels)
         scores = np.array(scores)
 
