@@ -5,6 +5,9 @@ from model.network import DeepSVDDNetwork
 from utils.deepSVDD_trainer import DeepSVDDTrainer
 from model.encoder import build_autoencoder
 from utils.ae_trainer import AETrainer
+
+import numpy as np
+import matplotlib.pyplot as plt
 class DeepSVDD(object):
     """A class for the Deep SVDD method.
 
@@ -43,11 +46,14 @@ class DeepSVDD(object):
         self.ae_trainer = None
         self.ae_optimizer_name = None
 
+        self.history_R = []
+
         self.results = {
             'train_time': None,
             'test_auc': None,
             'test_time': None,
             'test_scores': None,
+            
         }
 
     def set_network(self):
@@ -67,6 +73,7 @@ class DeepSVDD(object):
         self.net = self.trainer.train(trainloader, self.net)
         self.R = float(self.net.R.cpu().data.numpy())  # get float
         self.c = self.net.c.cpu().data.numpy().tolist()  # get list
+        self.history_R = self.trainer.history_R
         self.results['train_time'] = self.trainer.train_time
 
     def test(self, testloader, device: str = 'cuda', n_jobs_dataloader: int = 0):
@@ -109,16 +116,24 @@ class DeepSVDD(object):
         # Load the new state_dict
         self.net.load_state_dict(net_dict)
 
-    def save_model(self, export_model, save_ae=True):
+    def save_model(self, export_model, export_json):
         """Save Deep SVDD model to export_model."""
 
         net_dict = self.net.state_dict()
-        ae_net_dict = self.ae_net.state_dict() if save_ae else None
+        #ae_net_dict = self.ae_net.state_dict() if save_ae else None
 
-        torch.save({'R': self.R,
-                    'c': self.c,
-                    'net_dict': net_dict,
-                    'ae_net_dict': ae_net_dict}, export_model)
+        torch.save({'net_dict': net_dict}, export_model)
+        x = torch.rand(1,32).float()
+        input_names=["inputs"]
+        output_names = ["output"]
+        torch_out = torch.onnx.export(self.net.cpu(), x, export_model+".onnx", export_params=True,verbose=False,input_names=input_names, output_names=output_names)
+    def save_fig(self, epochs, export_path):
+        """Save Deep SVDD model to export_model."""
+
+        x = np.arange(epochs)
+
+        plt.plot(x,self.history_R)
+        plt.savefig(export_path+'/historyR.png')
 
     def load_model(self, model_path, load_ae=False):
         """Load Deep SVDD model from model_path."""
@@ -132,6 +147,8 @@ class DeepSVDD(object):
             if self.ae_net is None:
                 self.ae_net = build_autoencoder(self.net_name)
             self.ae_net.load_state_dict(model_dict['ae_net_dict'])
+
+        
 
     def save_results(self, export_json):
         """Save results dict to a JSON-file."""

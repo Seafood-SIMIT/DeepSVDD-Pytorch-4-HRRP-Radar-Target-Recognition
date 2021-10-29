@@ -1,7 +1,7 @@
 
 import torch
 
-def train(args, pt_dir, chkpt_path, trainloader, testloader, writer, logger, hp, deep_SVDD):
+def train(args, pt_dir, chkpt_path, trainloader, testloader, writer, logger, hp, deep_SVDD,fig_pth):
     #device
     if torch.cuda.is_available():
         logger.info("Device GPU")
@@ -53,3 +53,9 @@ def train(args, pt_dir, chkpt_path, trainloader, testloader, writer, logger, hp,
 
     # Test model
     deep_SVDD.test(testloader, device=device, n_jobs_dataloader=0)
+    deep_SVDD.save_results(export_json=fig_pth + '/results.json')
+
+    deep_SVDD.save_fig(epochs=hp.train.epochs,export_path=fig_pth)
+    model_path=fig_pth + '/chkpt/'+args.model
+    deep_SVDD.save_model(export_model=model_path+'.pt',export_json=model_path+'_config.json')
+    #cfg.save_config()

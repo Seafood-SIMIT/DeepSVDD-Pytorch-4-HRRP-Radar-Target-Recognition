@@ -10,7 +10,7 @@ train:
   optimizer: 'adam'
   lr: 0.0003
   epochs: 40
-  lr_milestone: 100
+  lr_milestone: 1000
   weight_decay: 0.5e-6
   n_jobs_dataloader: 0
 ---
@@ -18,7 +18,7 @@ ae:
   lr: 0.0003
   epochs: 40
   optimizer: 'adam'
-  lr_milestone: 20
+  lr_milestone: 1000
   batch_size: 64
   weight_decay: 0.5e-3
   normal_class: 3
@@ -31,3 +31,6 @@ log:
 deepsvdd:
   objective: 'soft-boundary'
   nu: 0.1
+---
+export:
+  path: 'output'

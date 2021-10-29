@@ -26,6 +26,7 @@ class DeepSVDDTrainer(BaseTrainer):
         self.c = torch.tensor(c, device=self.device,requires_grad = True) if c is not None else None
         self.nu = nu
         self.init_flag=0
+        self.history_R=[]
         # Optimization parameters
         self.warm_up_n_epochs = 4  # number of training epochs for soft-boundary Deep SVDD before radius R gets updated
 
@@ -60,6 +61,7 @@ class DeepSVDDTrainer(BaseTrainer):
         logger.info('Starting training...')
         start_time = time.time()
         net.train()
+        #self.history_R = []
         for epoch in range(self.n_epochs):
 
             #scheduler.step()
@@ -90,6 +92,7 @@ class DeepSVDDTrainer(BaseTrainer):
                     loss = torch.mean(dist)
                 loss.backward()
                 optimizer.step()
+                # 记录训练过程
                 idx = idx+1
                 #if idx%20 == 0:
                     #print('Network OUtput',outputs[0])
@@ -102,6 +105,7 @@ class DeepSVDDTrainer(BaseTrainer):
                 loss_epoch += loss.item()
                 n_batches += 1
             # log epoch statistics
+            self.history_R.append(float(net.R.cpu().data.numpy()))
             epoch_train_time = time.time() - epoch_start_time
             logger.info('  Epoch {}/{}\t Time: {:.3f}\t Loss: {:.8f}'
                         .format(epoch + 1, self.n_epochs, epoch_train_time, loss_epoch / n_batches))

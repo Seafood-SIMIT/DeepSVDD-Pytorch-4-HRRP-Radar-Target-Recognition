@@ -31,27 +31,23 @@ class DeepSVDDNetwork(BaseNet):
             nn.MaxPool1d(2,2)
         )
 
+        
+        self.lstm = nn.LSTM(
+                            input_size=8,
+                            hidden_size=8,
+                            batch_first=True,
+                            bidirectional=False,
+                            )
         self.fc = nn.Sequential(
             nn.Linear(4*8, self.rep_dim, bias=False)
         )
-        # self.lstm = nn.LSTM(
-        #                     input_size=32,
-        #                     hidden_size=16,
-        #                     batch_first=True,
-        #                     bidirectional=False,
-        #                     )
-
 
 
     def forward(self, x):
         x = x.unsqueeze(1)      #[batch,1,32]
         x = self.conv(x)       #[batch,out,32]
-        #x = self.pool(F.leaky_relu(x))
-        #x, (h_n,c_n) = self.lstm(x)     #[batch,input,hidden]
-        #print(x.shape)
+        x, (h_n,c_n) = self.lstm(x)     #[batch,input,hidden]
         x = x.contiguous().view(x.size(0), -1)       #[batch,input*hidden]
-        #print(x.shape)
         x = self.fc(x)                 #[batch,rep_dim]
-        #x = torch.tanh(x)
 
         return x

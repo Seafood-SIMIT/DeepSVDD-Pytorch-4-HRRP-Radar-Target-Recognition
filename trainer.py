@@ -22,10 +22,12 @@ if __name__ == '__main__':
 
     hp = HParam(args.config)
 
-    pt_dir = os.path.join(args.base_dir, hp.log.chkpt_dir, args.model)
+    pt_dir = os.path.join(args.base_dir,'output' , args.model,hp.log.chkpt_dir)
     os.makedirs(pt_dir, exist_ok=True)
+    fig_pth = os.path.join(args.base_dir,'output' , args.model)
+    os.makedirs(fig_pth, exist_ok=True)
 
-    log_dir = os.path.join(args.base_dir, hp.log.log_dir, args.model)
+    log_dir = os.path.join(args.base_dir,'output' , args.model,hp.log.log_dir)
     if os.path.exists(log_dir):
         del_list = os.listdir(log_dir)
         for del_f in del_list:
@@ -36,6 +38,7 @@ if __name__ == '__main__':
         os.makedirs(log_dir, exist_ok=True)
 
     chkpt_pth = args.checkpoint_path if args.checkpoint_path is not None else None
+
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(message)s',
@@ -60,4 +63,4 @@ if __name__ == '__main__':
     deep_SVDD = DeepSVDD(hp.deepsvdd.objective, hp.deepsvdd.nu)
     deep_SVDD.set_network()
 
-    train(args, pt_dir, chkpt_pth, trainloader, testloader, writer, logger, hp, deep_SVDD)
+    train(args, pt_dir, chkpt_pth, trainloader, testloader, writer, logger, hp, deep_SVDD, fig_pth)
